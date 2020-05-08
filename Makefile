@@ -1,4 +1,4 @@
-.PHONY: run build test clean
+.PHONY: build test
 
 test: venv
 	. venv/bin/activate && py.test tests -v
@@ -9,9 +9,3 @@ venv:
 	pip3 install -r requirements.txt; \
 	pip3 install -r tests/requirements.txt; \
 	touch venv
-
-clean:
-	rm -rf dist/; \
-	rm -rf *.egg-info; \
-	find . -name "*.pyc" -exec rm -f {} \; \
-	rm -rf venv;
