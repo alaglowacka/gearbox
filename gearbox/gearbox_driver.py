@@ -1,5 +1,5 @@
-from gearbox.commons import DrivingMode, GasPressure, EngineRPMS
-from gearbox.driving_modes import ComfortStrategy
+from gearbox.commons import DrivingMode, GasPressure, EngineRPMS, AggressiveMode
+from gearbox.driving_modes import DrivingModeStrategy
 from gearbox.external_systems import ExternalSystems
 from gearbox.gearbox_adapter import GearboxState, GearboxAdapter
 
@@ -16,7 +16,7 @@ class GearboxDriver:
     def __init__(self, gearbox: GearboxAdapter, rpm_provider: RPMProvider):
         self._gearbox = gearbox
         self._rpm_provider = rpm_provider
-        self._strategy = ComfortStrategy()
+        self._strategy = DrivingModeStrategy.create(DrivingMode.COMFORT)
 
     def handle_gas(self, pressure: GasPressure):
         if self._gearbox.get_state() != GearboxState.DRIVE:
@@ -31,7 +31,10 @@ class GearboxDriver:
         self._gearbox.change_gear(gear)
 
     def change_mode(self, new_mode: DrivingMode):
-        self._strategy = self._strategy.change_driving_mode(new_mode)
+        self._strategy = DrivingModeStrategy.create(new_mode)
+
+    def change_aggressiveness(self, new_mode: AggressiveMode):
+        self._strategy = DrivingModeStrategy.create(self._strategy.MODE, new_mode)
 
     def increase_gear(self):
         self._gearbox.increase_gear()

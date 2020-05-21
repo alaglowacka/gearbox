@@ -31,25 +31,15 @@ class EngineRPMS(ImmutableModel):
             raise ValueError()
 
 
-class GearChangeDownThreshold(ImmutableModel):
-    th: EngineRPMS
+class RPMSRange(ImmutableModel):
+    left:  EngineRPMS
+    right: EngineRPMS
 
-    def is_exceeded(self, rpms):
-        return rpms.value < self.th.value
+    def is_lower(self, rpms: EngineRPMS) -> bool:
+        return rpms.value < self.left.value
 
-
-class GearChangeUpThreshold(ImmutableModel):
-    th: EngineRPMS
-
-    def is_exceeded(self, rpms):
-        return rpms.value > self.th.value
-
-
-class AggressiveGearChangeUpThreshold(ImmutableModel):
-    th: EngineRPMS
-
-    def is_exceeded(self, rpms: EngineRPMS, mode: AggressiveMode):
-        return rpms.value > self.th.value * mode.value
+    def is_greater(self, rpms: EngineRPMS) -> bool:
+        return rpms.value > self.right.value
 
 
 class GasPressure(ImmutableModel):

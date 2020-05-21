@@ -1,94 +1,99 @@
 from gearbox.commons import (
     DrivingMode,
-    AggressiveGearChangeUpThreshold,
-    GasPressure,
-    GearChangeUpThreshold,
     EngineRPMS,
     AggressiveMode,
-    GearChangeDownThreshold,
-)
+    RPMSRange, GasPressure)
 from gearbox.gearbox_adapter import Gear
+
+
+class GearChangeThresholdProvider:
+    THRESHOLDS = {
+        DrivingMode.SPORT: (1500, 4500),
+        DrivingMode.COMFORT: (1000, 2500),
+        DrivingMode.ECO: (1000, 2000),
+    }
+
+    @classmethod
+    def for_mode(cls, driving_mode: DrivingMode, aggressive_mode: AggressiveMode = None) -> RPMSRange:
+        left, right = cls.THRESHOLDS[driving_mode]
+        if aggressive_mode:
+            right *= aggressive_mode.value
+        return RPMSRange(left, right)
 
 
 class DrivingModeStrategy:
     MODE = None
 
-    def __init__(
-        self, aggressive_mode=AggressiveMode.Mode1,
-    ):
-        self._aggressive_mode = aggressive_mode
-
     def handle_gas(
-        self, curr_gear: Gear, curr_rpm: EngineRPMS, pressure: GasPressure
+            self, curr_gear: Gear, curr_rpm: EngineRPMS, pressure: GasPressure
     ) -> Gear:
         raise NotImplementedError
 
-    def change_driving_mode(self, new_mode: DrivingMode) -> 'DrivingModeStrategy':
-        if new_mode == self.MODE:
-            return self
-        if new_mode == DrivingMode.SPORT:
-            return SportStrategy(self._aggressive_mode)
-        if new_mode == DrivingMode.COMFORT:
-            return ComfortStrategy(self._aggressive_mode)
-        return EcoStrategy(self._aggressive_mode)
-
-    def change_aggressive_mode(self, new_aggressive_mode: AggressiveMode):
-        self._aggressive_mode = new_aggressive_mode
+    @classmethod
+    def create(
+            cls,
+            driving_mode: DrivingMode,
+            aggressive_mode: AggressiveMode = AggressiveMode.Mode1
+    ) -> "DrivingModeStrategy":
+        if driving_mode == DrivingMode.SPORT:
+            return SportStrategy(aggressive_mode)
+        if driving_mode == DrivingMode.COMFORT:
+            return ComfortStrategy(aggressive_mode)
+        return EcoStrategy()
 
 
 class SportStrategy(DrivingModeStrategy):
     MODE = DrivingMode.SPORT
-    CHANGE_GEAR_UP_THRESHOLD = AggressiveGearChangeUpThreshold(
-        th=EngineRPMS(value=4500.0)
-    )
-    CHANGE_GEAR_DOWN_THRESHOLD = GearChangeDownThreshold(th=EngineRPMS(value=1500.0))
+
+    def __init__(
+            self, aggressive_mode=AggressiveMode.Mode1,
+    ):
+        self._rpsm_range = GearChangeThresholdProvider.for_mode(self.MODE, aggressive_mode)
 
     def handle_gas(
-        self, curr_gear: Gear, curr_rpm: EngineRPMS, pressure: GasPressure
+            self, curr_gear: Gear, curr_rpm: EngineRPMS, pressure: GasPressure
     ) -> Gear:
         if pressure.is_aggressive_kickdown():
             return curr_gear.previous().previous()
         elif pressure.is_kickdown():
             return curr_gear.previous()
         else:
-            if self.CHANGE_GEAR_UP_THRESHOLD.is_exceeded(
-                curr_rpm, self._aggressive_mode
-            ):
+            if self._rpsm_range.is_greater(curr_rpm):
                 return curr_gear.next()
-            if self.CHANGE_GEAR_DOWN_THRESHOLD.is_exceeded(curr_rpm):
+            if self._rpsm_range.is_lower(curr_rpm):
                 return curr_gear.previous()
 
 
 class ComfortStrategy(DrivingModeStrategy):
     MODE = DrivingMode.COMFORT
-    CHANGE_GEAR_UP_THRESHOLD = AggressiveGearChangeUpThreshold(
-        th=EngineRPMS(value=2500.0)
-    )
-    CHANGE_GEAR_DOWN_THRESHOLD = GearChangeDownThreshold(th=EngineRPMS(value=1000.0))
+
+    def __init__(
+            self, aggressive_mode=AggressiveMode.Mode1,
+    ):
+        self._rpsm_range = GearChangeThresholdProvider.for_mode(self.MODE, aggressive_mode)
 
     def handle_gas(
-        self, curr_gear: Gear, curr_rpm: EngineRPMS, pressure: GasPressure
+            self, curr_gear: Gear, curr_rpm: EngineRPMS, pressure: GasPressure
     ) -> Gear:
         if pressure.is_kickdown():
             return curr_gear.previous()
         else:
-            if self.CHANGE_GEAR_UP_THRESHOLD.is_exceeded(
-                curr_rpm, self._aggressive_mode
-            ):
+            if self._rpsm_range.is_greater(curr_rpm):
                 return curr_gear.next()
-            if self.CHANGE_GEAR_DOWN_THRESHOLD.is_exceeded(curr_rpm):
+            if self._rpsm_range.is_lower(curr_rpm):
                 return curr_gear.previous()
 
 
 class EcoStrategy(DrivingModeStrategy):
     MODE = DrivingMode.ECO
-    CHANGE_GEAR_UP_THRESHOLD = GearChangeUpThreshold(th=EngineRPMS(value=2000.0))
-    CHANGE_GEAR_DOWN_THRESHOLD = GearChangeDownThreshold(th=EngineRPMS(value=1000.0))
+
+    def __init__(self):
+        self._rpsm_range = GearChangeThresholdProvider.for_mode(self.MODE)
 
     def handle_gas(
-        self, curr_gear: Gear, curr_rpm: EngineRPMS, pressure: GasPressure
+            self, curr_gear: Gear, curr_rpm: EngineRPMS, pressure: GasPressure
     ) -> Gear:
-        if self.CHANGE_GEAR_UP_THRESHOLD.is_exceeded(curr_rpm):
+        if self._rpsm_range.is_greater(curr_rpm):  # TODO nazwa
             return curr_gear.next()
-        if self.CHANGE_GEAR_DOWN_THRESHOLD.is_exceeded(curr_rpm):
+        if self._rpsm_range.is_lower(curr_rpm):
             return curr_gear.previous()
