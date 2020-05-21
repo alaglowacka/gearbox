@@ -7,7 +7,6 @@ from gearbox.commons import (
     AggressiveMode,
     GearChangeDownThreshold,
 )
-from gearbox.external_systems import ExternalSystems
 from gearbox.gearbox_adapter import GearboxAdapter
 
 
@@ -17,14 +16,12 @@ class DrivingModeStrategy:
     def __init__(
         self,
         gearbox: GearboxAdapter,
-        external_systems: ExternalSystems,
         aggressive_mode=AggressiveMode.Mode1,
     ):
         self._gearbox = gearbox
-        self._external_systems = external_systems
         self._aggressive_mode = aggressive_mode
 
-    def handle_gas(self, pressure: GasPressure):
+    def handle_gas(self, curr_rpm: EngineRPMS, pressure: GasPressure):
         raise NotImplementedError
 
     def change_driving_mode(self, new_mode: DrivingMode) -> 'Strategy':
@@ -32,14 +29,14 @@ class DrivingModeStrategy:
             return self
         if new_mode == DrivingMode.SPORT:
             return SportStrategy(
-                self._gearbox, self._external_systems, self._aggressive_mode
+                self._gearbox, self._aggressive_mode
             )
         if new_mode == DrivingMode.COMFORT:
             return ComfortStrategy(
-                self._gearbox, self._external_systems, self._aggressive_mode
+                self._gearbox, self._aggressive_mode
             )
         return EcoStrategy(
-            self._gearbox, self._external_systems, self._aggressive_mode
+            self._gearbox, self._aggressive_mode
         )
 
     def change_aggressive_mode(self, new_aggressive_mode: AggressiveMode):
@@ -55,14 +52,13 @@ class SportStrategy(DrivingModeStrategy):
         th=EngineRPMS(value=1500.0)
     )
 
-    def handle_gas(self, pressure: GasPressure):
+    def handle_gas(self, curr_rpm: EngineRPMS, pressure: GasPressure):
         if pressure.is_aggressive_kickdown():
             self._gearbox.decrease_gear()
             self._gearbox.decrease_gear()
         elif pressure.is_kickdown():
             self._gearbox.decrease_gear()
         else:
-            curr_rpm = self._external_systems.get_current_rpm()
             if self.CHANGE_GEAR_UP_THRESHOLD.is_exceeded(
                 curr_rpm, self._aggressive_mode
             ):
@@ -80,11 +76,10 @@ class ComfortStrategy(DrivingModeStrategy):
         th=EngineRPMS(value=1000.0)
     )
 
-    def handle_gas(self, pressure: GasPressure):
+    def handle_gas(self, curr_rpm: EngineRPMS, pressure: GasPressure):
         if pressure.is_kickdown():
             self._gearbox.decrease_gear()
         else:
-            curr_rpm = self._external_systems.get_current_rpm()
             if self.CHANGE_GEAR_UP_THRESHOLD.is_exceeded(
                 curr_rpm, self._aggressive_mode
             ):
@@ -102,8 +97,7 @@ class EcoStrategy(DrivingModeStrategy):
         th=EngineRPMS(value=1000.0)
     )
 
-    def handle_gas(self, pressure: GasPressure):
-        curr_rpm = self._external_systems.get_current_rpm()
+    def handle_gas(self, curr_rpm: EngineRPMS, pressure: GasPressure):
         if self.CHANGE_GEAR_UP_THRESHOLD.is_exceeded(curr_rpm):
             self._gearbox.increase_gear()
         if self.CHANGE_GEAR_DOWN_THRESHOLD.is_exceeded(curr_rpm):
