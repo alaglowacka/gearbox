@@ -1,22 +1,20 @@
 from unittest.mock import create_autospec
 
 from gearbox.commons import DrivingMode, EngineRPMS
-from gearbox.external_systems import ExternalSystems
 from gearbox.gearbox import Gearbox
-from gearbox.gearbox_adapter import GearboxAdapter
-from gearbox.gearbox_driver import GearboxDriver
+from gearbox.gearbox_adapter import GearboxAdapter, Gear
+from gearbox.gearbox_driver import GearboxDriver, RPMProvider
 
 
 def create_gearbox():
     class GearBuilder:
         def __init__(self):
             self._gearbox = GearboxAdapter(Gearbox())
-            self._gear = 1
+            self._gear = Gear(gear=1)
             self._mode = DrivingMode.ECO
 
-        def with_gear(self, gear: int):
-            for _ in range(1, gear):
-                self._gearbox.increase_gear()
+        def with_gear(self, gear: Gear):
+            self._gearbox.change_gear(gear)
             return self
 
         def build(self):
@@ -29,7 +27,7 @@ def create_gearbox_driver(gearbox: GearboxAdapter):
     class GearDriverBuilder:
         def __init__(self):
             self._gearbox = gearbox
-            self._external_systems = create_autospec(ExternalSystems())
+            self._rpm_provider = create_autospec(RPMProvider)
             self._mode = None
 
         def with_sport_mode(self):
@@ -37,11 +35,11 @@ def create_gearbox_driver(gearbox: GearboxAdapter):
             return self
 
         def with_engine_at(self, rpms: EngineRPMS):
-            self._external_systems.get_current_rpm.return_value = rpms
+            self._rpm_provider.current_rpms.return_value = rpms
             return self
 
         def build(self):
-            driver = GearboxDriver(self._gearbox, self._external_systems)
+            driver = GearboxDriver(self._gearbox, self._rpm_provider)
             if self._mode:
                 driver.change_mode(self._mode)
             return driver

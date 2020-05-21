@@ -9,9 +9,9 @@ class ImmutableModel(BaseModel):
 
 
 class DrivingMode(str, Enum):
-    ECO = 'ECO'
-    COMFORT = 'COMFORT'
-    SPORT = 'SPORT'
+    ECO = "ECO"
+    COMFORT = "COMFORT"
+    SPORT = "SPORT"
 
 
 class AggressiveMode(Enum):

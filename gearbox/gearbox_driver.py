@@ -4,20 +4,31 @@ from gearbox.external_systems import ExternalSystems
 from gearbox.gearbox_adapter import GearboxState, GearboxAdapter
 
 
-class GearboxDriver:
-    def __init__(
-        self, gearbox: GearboxAdapter, external_systems: ExternalSystems
-    ):
-        self._gearbox = gearbox
+class RPMProvider:
+    def __init__(self, external_systems: ExternalSystems):
         self._external_systems = external_systems
-        self._strategy = ComfortStrategy(self._gearbox)
+
+    def current_rpms(self) -> EngineRPMS:
+        return self._external_systems.get_current_rpm()
+
+
+class GearboxDriver:
+    def __init__(self, gearbox: GearboxAdapter, rpm_provider: RPMProvider):
+        self._gearbox = gearbox
+        self._rpm_provider = rpm_provider
+        self._strategy = ComfortStrategy()
 
     def handle_gas(self, pressure: GasPressure):
         if self._gearbox.get_state() != GearboxState.DRIVE:
             return
 
-        curr_rpm = self._external_systems.get_current_rpm()
-        self._strategy.handle_gas(curr_rpm=curr_rpm, pressure=pressure)
+        curr_rpm = self._rpm_provider.current_rpms()
+        gear = self._strategy.handle_gas(
+            curr_gear=self._gearbox.current_gear,
+            curr_rpm=curr_rpm,
+            pressure=pressure
+        )
+        self._gearbox.change_gear(gear)
 
     def change_mode(self, new_mode: DrivingMode):
         self._strategy = self._strategy.change_driving_mode(new_mode)
@@ -27,11 +38,3 @@ class GearboxDriver:
 
     def decrease_gear(self):
         self._gearbox.decrease_gear()
-
-
-class RPMProvider:
-    def __init__(self, external_systems: ExternalSystems):
-        self._external_systems = external_systems
-
-    def current_rpms(self) -> EngineRPMS:
-        return self._external_systems.get_current_rpm()
