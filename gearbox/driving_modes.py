@@ -8,9 +8,9 @@ from gearbox.gearbox_adapter import Gear
 
 class GearChangeThresholdProvider:
     THRESHOLDS = {
-        DrivingMode.SPORT: (1500, 4500),
-        DrivingMode.COMFORT: (1000, 2500),
-        DrivingMode.ECO: (1000, 2000),
+        DrivingMode.SPORT: (EngineRPMS(value=1500), EngineRPMS(value=4500)),
+        DrivingMode.COMFORT: (EngineRPMS(value=1000), EngineRPMS(value=2500)),
+        DrivingMode.ECO: (EngineRPMS(value=1000), EngineRPMS(value=2000)),
     }
 
     @classmethod
@@ -18,7 +18,7 @@ class GearChangeThresholdProvider:
         left, right = cls.THRESHOLDS[driving_mode]
         if aggressive_mode:
             right *= aggressive_mode.value
-        return RPMSRange(left, right)
+        return RPMSRange(left=left, right=right)
 
 
 class DrivingModeStrategy:
@@ -58,9 +58,9 @@ class SportStrategy(DrivingModeStrategy):
         elif pressure.is_kickdown():
             return curr_gear.previous()
         else:
-            if self._rpsm_range.is_greater(curr_rpm):
+            if curr_rpm.is_above(self._rpsm_range):
                 return curr_gear.next()
-            if self._rpsm_range.is_lower(curr_rpm):
+            if curr_rpm.is_below(self._rpsm_range):
                 return curr_gear.previous()
 
 
@@ -78,9 +78,9 @@ class ComfortStrategy(DrivingModeStrategy):
         if pressure.is_kickdown():
             return curr_gear.previous()
         else:
-            if self._rpsm_range.is_greater(curr_rpm):
+            if curr_rpm.is_above(self._rpsm_range):
                 return curr_gear.next()
-            if self._rpsm_range.is_lower(curr_rpm):
+            if curr_rpm.is_below(self._rpsm_range):
                 return curr_gear.previous()
 
 
@@ -93,7 +93,7 @@ class EcoStrategy(DrivingModeStrategy):
     def handle_gas(
             self, curr_gear: Gear, curr_rpm: EngineRPMS, pressure: GasPressure
     ) -> Gear:
-        if self._rpsm_range.is_greater(curr_rpm):  # TODO nazwa
+        if curr_rpm.is_above(self._rpsm_range):
             return curr_gear.next()
-        if self._rpsm_range.is_lower(curr_rpm):
+        if curr_rpm.is_below(self._rpsm_range):
             return curr_gear.previous()

@@ -35,7 +35,7 @@ class GearboxAdapter:
 
     def __init__(self, gearbox: Gearbox):
         self._gearbox = gearbox
-        self._set_current_gear(Gear(gear=1))
+        self.change_gear(Gear(gear=1))
         self.set_state(GearboxState.DRIVE)
 
     def get_state(self) -> GearboxState:
@@ -45,16 +45,12 @@ class GearboxAdapter:
         self._gearbox.set_state(state.value)
 
     def change_gear(self, gear_to_set: Gear):
-        self._set_current_gear(
-            self.MAX_GEAR if gear_to_set.is_greater_than(self.MAX_GEAR) else gear_to_set
-        )
+        gear = self.MAX_GEAR if gear_to_set.is_greater_than(self.MAX_GEAR) else gear_to_set
+        self._gearbox.set_current_gear(gear.gear)
 
     @property
     def current_gear(self) -> Gear:
         return Gear(gear=self._gearbox.get_current_gear())
-
-    def _set_current_gear(self, gear: Gear):
-        self._gearbox.set_current_gear(gear.gear)
 
     def get_max_drive(self) -> Gear:
         return Gear(gear=self._gearbox.get_max_drive())  # TODO ogarnac max drive
@@ -62,10 +58,8 @@ class GearboxAdapter:
     def set_max_drive(self, max_drive: Gear):
         self._gearbox.set_max_drive(max_drive.gear)
 
-    # def increase_gear(self):
-    #     if self.current_gear < self.MAX_GEAR:
-    #         self._set_current_gear(self.current_gear + 1)
-    #
-    # def decrease_gear(self):
-    #     if self.current_gear > 1:
-    #         self._set_current_gear(self.current_gear - 1)
+    def increase_gear(self):
+        self.change_gear(self.current_gear.next())
+
+    def decrease_gear(self):
+        self.change_gear(self.current_gear.previous())

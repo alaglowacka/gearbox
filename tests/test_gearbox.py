@@ -1,4 +1,5 @@
 from gearbox.commons import GasPressure, EngineRPMS
+from gearbox.gearbox_adapter import Gear
 from tests.utils import create_gearbox, create_gearbox_driver
 
 GENTLE_PRESSURE = GasPressure(pressure=30)
@@ -8,7 +9,7 @@ RPMS_ABOVE_SPORT_MODE_THRESHOLD = EngineRPMS(value=5000)
 
 
 def test_gear_cannot_exceed_range():
-    gearbox = create_gearbox().with_gear(1).build()
+    gearbox = create_gearbox().with_gear(Gear(gear=1)).build()
     gearbox_driver = create_gearbox_driver(gearbox).build()
 
     for x in range(10):
@@ -17,7 +18,7 @@ def test_gear_cannot_exceed_range():
 
 
 def test_gear_is_changed_when_threshold_is_exceeded():
-    initial_gear = 1
+    initial_gear = Gear(gear=1)
     gearbox = create_gearbox().with_gear(initial_gear).build()
     gearbox_driver = (
         create_gearbox_driver(gearbox)
@@ -31,7 +32,7 @@ def test_gear_is_changed_when_threshold_is_exceeded():
 
 
 def test_gear_is_reduced_when_kickdown():
-    initial_gear = 4
+    initial_gear = Gear(gear=4)
     gearbox = create_gearbox().with_gear(initial_gear).build()
     gearbox_driver = create_gearbox_driver(gearbox).with_sport_mode().build()
 
@@ -41,7 +42,7 @@ def test_gear_is_reduced_when_kickdown():
 
 
 def test_gear_is_not_reduced_when_kickdown_on_lowest_gear():
-    initial_gear = 1
+    initial_gear = Gear(gear=1)
     gearbox = create_gearbox().with_gear(initial_gear).build()
     gearbox_driver = create_gearbox_driver(gearbox).with_sport_mode().build()
 
@@ -51,7 +52,7 @@ def test_gear_is_not_reduced_when_kickdown_on_lowest_gear():
 
 
 def test_gear_is_reduced_twice_when_aggressive_kickdown():
-    initial_gear = 4
+    initial_gear = Gear(gear=4)
     gearbox = create_gearbox().with_gear(initial_gear).build()
     gearbox_driver = create_gearbox_driver(gearbox).with_sport_mode().build()
 
@@ -64,17 +65,17 @@ def assert_max_gear_is_set(gearbox):
     assert gearbox.current_gear == gearbox.MAX_GEAR
 
 
-def assert_gear_was_increased(gearbox, initial_gear):
-    assert gearbox.current_gear == initial_gear + 1
+def assert_gear_was_increased(gearbox, initial_gear: Gear):
+    assert gearbox.current_gear == initial_gear.next()
 
 
-def assert_gear_was_reduced(gearbox, initial_gear):
-    assert gearbox.current_gear == initial_gear - 1
+def assert_gear_was_reduced(gearbox, initial_gear: Gear):
+    assert gearbox.current_gear == initial_gear.previous()
 
 
-def assert_gear_was_reduced_twice(gearbox, initial_gear):
-    assert gearbox.current_gear == initial_gear - 2
+def assert_gear_was_reduced_twice(gearbox, initial_gear: Gear):
+    assert gearbox.current_gear == initial_gear.previous().previous()
 
 
-def assert_gear_was_not_changed(gearbox, initial_gear):
+def assert_gear_was_not_changed(gearbox, initial_gear: Gear):
     assert gearbox.current_gear == initial_gear
