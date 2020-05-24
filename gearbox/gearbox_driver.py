@@ -24,9 +24,7 @@ class GearboxDriver:
 
         curr_rpm = self._rpm_provider.current_rpms()
         gear = self._strategy.handle_gas(
-            curr_gear=self._gearbox.current_gear,
-            curr_rpm=curr_rpm,
-            pressure=pressure
+            curr_gear=self._gearbox.current_gear, curr_rpm=curr_rpm, pressure=pressure
         )
         self._gearbox.change_gear(gear)
 

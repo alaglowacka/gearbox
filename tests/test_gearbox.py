@@ -1,20 +1,27 @@
-from gearbox.commons import GasPressure, EngineRPMS
 from gearbox.gearbox_adapter import Gear
-from tests.utils import create_gearbox, create_gearbox_driver
-
-GENTLE_PRESSURE = GasPressure(pressure=30)
-KICKDOWN = GasPressure(pressure=60)
-AGGRESIVE_KICKDOWN = GasPressure(pressure=80)
-RPMS_ABOVE_SPORT_MODE_THRESHOLD = EngineRPMS(value=5000)
+from tests.utils import (
+    create_gearbox,
+    create_gearbox_driver,
+    GENTLE_PRESSURE,
+    KICKDOWN,
+    AGGRESIVE_KICKDOWN,
+    RPMS_ABOVE_SPORT_MODE_THRESHOLD,
+    assert_max_gear_is_set,
+    assert_gear_was_increased,
+    assert_gear_was_reduced,
+    assert_gear_was_reduced_twice,
+    assert_gear_was_not_changed,
+)
 
 
 def test_gear_cannot_exceed_range():
-    gearbox = create_gearbox().with_gear(Gear(gear=1)).build()
+    max_gear = Gear(gear=6)
+    gearbox = create_gearbox().with_gear(Gear(gear=1)).with_max_gear(max_gear).build()
     gearbox_driver = create_gearbox_driver(gearbox).build()
 
     for x in range(10):
         gearbox_driver.increase_gear()
-    assert_max_gear_is_set(gearbox)
+    assert_max_gear_is_set(gearbox, max_gear)
 
 
 def test_gear_is_changed_when_threshold_is_exceeded():
@@ -59,23 +66,3 @@ def test_gear_is_reduced_twice_when_aggressive_kickdown():
     gearbox_driver.handle_gas(pressure=AGGRESIVE_KICKDOWN)
 
     assert_gear_was_reduced_twice(gearbox, initial_gear)
-
-
-def assert_max_gear_is_set(gearbox):
-    assert gearbox.current_gear == gearbox.MAX_GEAR
-
-
-def assert_gear_was_increased(gearbox, initial_gear: Gear):
-    assert gearbox.current_gear == initial_gear.next()
-
-
-def assert_gear_was_reduced(gearbox, initial_gear: Gear):
-    assert gearbox.current_gear == initial_gear.previous()
-
-
-def assert_gear_was_reduced_twice(gearbox, initial_gear: Gear):
-    assert gearbox.current_gear == initial_gear.previous().previous()
-
-
-def assert_gear_was_not_changed(gearbox, initial_gear: Gear):
-    assert gearbox.current_gear == initial_gear

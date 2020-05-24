@@ -24,17 +24,17 @@ class Gear(ImmutableModel):
     def previous(self) -> "Gear":
         return Gear(gear=self.gear - 1 if self.gear > 1 else 1)
 
-    def is_greater_than(self, other: 'Gear') -> bool:
+    def is_greater_than(self, other: "Gear") -> bool:
         return self.gear > other.gear
 
 
 class GearboxAdapter:
     """ Our wrapper for the API """
 
-    MAX_GEAR = Gear(gear=8)
-
-    def __init__(self, gearbox: Gearbox):
+    def __init__(self, gearbox: Gearbox, max_gear: Gear):
         self._gearbox = gearbox
+
+        self._gearbox.set_max_drive(max_gear.gear)
         self.change_gear(Gear(gear=1))
         self.set_state(GearboxState.DRIVE)
 
@@ -45,18 +45,20 @@ class GearboxAdapter:
         self._gearbox.set_state(state.value)
 
     def change_gear(self, gear_to_set: Gear):
-        gear = self.MAX_GEAR if gear_to_set.is_greater_than(self.MAX_GEAR) else gear_to_set
+        gear = (
+            self.max_drive
+            if gear_to_set.is_greater_than(self.max_drive)
+            else gear_to_set
+        )
         self._gearbox.set_current_gear(gear.gear)
 
     @property
     def current_gear(self) -> Gear:
         return Gear(gear=self._gearbox.get_current_gear())
 
-    def get_max_drive(self) -> Gear:
-        return Gear(gear=self._gearbox.get_max_drive())  # TODO ogarnac max drive
-
-    def set_max_drive(self, max_drive: Gear):
-        self._gearbox.set_max_drive(max_drive.gear)
+    @property
+    def max_drive(self) -> Gear:
+        return Gear(gear=self._gearbox.get_max_drive())
 
     def increase_gear(self):
         self.change_gear(self.current_gear.next())

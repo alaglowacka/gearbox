@@ -30,15 +30,15 @@ class EngineRPMS(ImmutableModel):
         if self.value < 0:
             raise ValueError()
 
-    def is_above(self, range: 'RPMSRange') -> bool:
+    def is_above(self, range: "RPMSRange") -> bool:
         return range.end_lower_than(self)
 
-    def is_below(self, range: 'RPMSRange') -> bool:
+    def is_below(self, range: "RPMSRange") -> bool:
         return range.start_greater_than(self)
 
 
 class RPMSRange(ImmutableModel):
-    left:  EngineRPMS
+    left: EngineRPMS
     right: EngineRPMS
 
     def start_greater_than(self, rpms: EngineRPMS) -> bool:
